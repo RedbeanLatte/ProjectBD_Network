@@ -1,6 +1,6 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "LocalPC.h"
+#include "LobbyPC.h"
 #include "Local/MyPlayerCameraManager.h"
 #include "Blueprint/UserWidget.h"
 #include "UI/ItemNameWidgetBase.h"
@@ -8,51 +8,37 @@
 #include "Components/TextBlock.h"
 #include "UI/InventoryWidgetBase.h"
 #include "UI/ItemSlotWidgetBase.h"
+#include "Lobby/LobbyWidgetBase.h"
 #include "Local/BDGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
-ALocalPC::ALocalPC()
+ALobbyPC::ALobbyPC()
 {
 	PlayerCameraManagerClass = AMyPlayerCameraManager::StaticClass(); // COD 에 있는 Class를 참조해서 등록한 클래스를 생성
 }
 
-void ALocalPC::BeginPlay()
+void ALobbyPC::BeginPlay()
 {
 	Super::BeginPlay();
 
-	SetupWidget(); // Client 실행
+	S2C_SetupWidget();
 }
 
-void ALocalPC::SetupWidget_Implementation()
+void ALobbyPC::S2C_SetupWidget_Implementation()
 {
-	// 블프 경로 저장
-	FStringClassReference ItemNameClass(TEXT("WidgetBlueprint'/Game/Blueprints/UI/ItemNameWidget.ItemNameWidget_C'"));
+	//Lobby 위젯 생성
+	FStringClassReference LobbyWidgetClass(TEXT("WidgetBlueprint'/Game/Blueprints/Lobby/UI/LobbyWidget.LobbyWidget_C'"));
 
-	//블프 클래스 로딩(CDO)
-	if (UClass* MyWidgetClass = ItemNameClass.TryLoadClass<UUserWidget>())
+	if (UClass* MyWidgetClass = LobbyWidgetClass.TryLoadClass<UUserWidget>())
 	{
-		//로딩된 블프 클래스 갖고 인스턴스 생성, 붙이기
-		ItemNameWidget = Cast<UItemNameWidgetBase>(CreateWidget<UUserWidget>(this, MyWidgetClass));
-		ItemNameWidget->AddToViewport();
-
-		ItemNameWidget->ItemName->SetText(FText::FromString(TEXT("CPP로 만든 이름")));
-		ItemNameWidget->SetVisibility(ESlateVisibility::Collapsed);
-	}
-
-	// 블프 경로 저장
-	FStringClassReference InventoryClass(TEXT("WidgetBlueprint'/Game/Blueprints/UI/InventoryWidget.InventoryWidget_C'"));
-
-	//블프 클래스 로딩(CDO)
-	if (UClass* MyWidgetClass = InventoryClass.TryLoadClass<UUserWidget>())
-	{
-		//로딩된 블프 클래스 갖고 인스턴스 생성, 붙이기
-		InventoryWidget = Cast<UInventoryWidgetBase>(CreateWidget<UUserWidget>(this, MyWidgetClass));
-		InventoryWidget->AddToViewport();
-		InventoryWidget->SetVisibility(ESlateVisibility::Collapsed);
+		LobbyWidget = Cast<ULobbyWidgetBase>(CreateWidget<UUserWidget>(this, MyWidgetClass));
+		LobbyWidget->AddToViewport();
+		SetInputMode(FInputModeGameAndUI());
+		bShowMouseCursor = true;
 	}
 }
 
-void ALocalPC::ShowItemName(FString & ItemName, bool Show)
+void ALobbyPC::ShowItemName(FString & ItemName, bool Show)
 {
 	ItemNameWidget->ItemName->SetText(FText::FromString(ItemName));
 	if (Show)
@@ -65,7 +51,7 @@ void ALocalPC::ShowItemName(FString & ItemName, bool Show)
 	}
 }
 
-void ALocalPC::ShowInventory()
+void ALobbyPC::ShowInventory()
 {
 	if (InventoryWidget->GetVisibility() == ESlateVisibility::Collapsed)
 	{
@@ -81,7 +67,7 @@ void ALocalPC::ShowInventory()
 	}
 }
 
-void ALocalPC::UpdateSlotData()
+void ALobbyPC::UpdateSlotData()
 {
 	InventoryWidget->HideAllSlot();
 

@@ -20,4 +20,6 @@ public:
 	bool PushItem(FItemDataTable Item);
 	bool UseItem(int Index);
 	int GetSameSlotIndexByItemIndex(FItemDataTable Data);
+
+	FString UserID;
 };

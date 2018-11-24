@@ -1,28 +1,28 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerController.h"
-#include "LocalPC.generated.h"
+#include "LobbyPC.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
-class PROJECTBD_API ALocalPC : public APlayerController
+class PROJECTBD_API ALobbyPC : public APlayerController
 {
 	GENERATED_BODY()
-	
+
 public:
-	ALocalPC();
-	
+	ALobbyPC();
+
 	virtual void BeginPlay() override;
-	
-	//¼ÒÀ¯ÁßÀÎ Å¬¶óÀÌ¾ğÆ®¿¡¼­ UI »ı¼º
+
+	//ì†Œìœ ì¤‘ì¸ í´ë¼ì´ì–¸íŠ¸ì—ì„œ UI ìƒì„±
 	UFUNCTION(Client, Reliable)
-	void SetupWidget();
-	void SetupWidget_Implementation();
+	void S2C_SetupWidget();
+	void S2C_SetupWidget_Implementation();
 
 	class UItemNameWidgetBase* ItemNameWidget;
 	class UInventoryWidgetBase* InventoryWidget;
@@ -31,4 +31,6 @@ public:
 
 	void ShowInventory();
 	void UpdateSlotData();
+
+	class ULobbyWidgetBase* LobbyWidget;
 };

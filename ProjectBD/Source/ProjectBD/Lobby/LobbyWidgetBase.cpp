@@ -5,12 +5,13 @@
 #include "Components/TextBlock.h"
 #include "Components/EditableTextBox.h"
 #include "Components/ScrollBox.h"
+#include "Kismet/GameplayStatics.h"
 
 void ULobbyWidgetBase::NativeConstruct()
 {
 	PublicMessage = Cast<UTextBlock>(GetWidgetFromName("PublicMessage"));
 	ConnectCount = Cast<UTextBlock>(GetWidgetFromName("ConnectCount"));
-	StartGameButton = Cast<UButton>(GetWidgetFromName("GameStartButton"));
+	StartGameButton = Cast<UButton>(GetWidgetFromName("StartGameButton"));
 	ChatInput = Cast<UEditableTextBox>(GetWidgetFromName("ChatInput"));
 	ChattingBox = Cast<UScrollBox>(GetWidgetFromName("ChattingBox"));
 
@@ -32,4 +33,6 @@ void ULobbyWidgetBase::OnTextCommited(const FText& Text, ETextCommit::Type Commi
 
 void ULobbyWidgetBase::StartGame()
 {
+	//UGameplayStatics::OpenLevel(GetWorld(), FName(TEXT("Sample01")));
+	GetWorld()->ServerTravel(TEXT("Battle"));
 }

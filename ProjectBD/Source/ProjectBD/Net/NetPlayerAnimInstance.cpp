@@ -1,12 +1,11 @@
-ï»¿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
-#include "MyPlayerAnimInstance.h"
-#include "Local/MyPlayer.h"
+#include "NetPlayerAnimInstance.h"
 #include "Net/NetPlayer.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/StreamableManager.h"
 
-void UMyPlayerAnimInstance::NativeInitializeAnimation()
+void UNetPlayerAnimInstance::NativeInitializeAnimation()
 {
 	FStreamableManager Loader;
 	FStringAssetReference MontagePath(
@@ -14,14 +13,13 @@ void UMyPlayerAnimInstance::NativeInitializeAnimation()
 	ReloadMontage = Loader.LoadSynchronous<UAnimMontage>(MontagePath);
 }
 
-void UMyPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
+void UNetPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	//í˜„ì¬ ì• ë‹ˆë©”ì´ì…˜ì˜ ì£¼ì¸ì´ ë‚´ê°€ ì‚¬ìš©í•´ë„ ë˜ëŠ” Pawn í´ë˜ìŠ¤ ì¸ì§€ í™•ì¸
-	//ì‚¬ìš© í•´ë„ ë˜ëŠ” ìƒíƒœì¸ì§€ í™•ì¸
-	//AMyPlayer* Pawn = Cast<AMyPlayer>(TryGetPawnOwner());
-	ANetPlayer* Pawn = Cast<ANetPlayer>(TryGetPawnOwner());
+	//ÇöÀç ¾Ö´Ï¸ŞÀÌ¼ÇÀÇ ÁÖÀÎÀÌ ³»°¡ »ç¿ëÇØµµ µÇ´Â Pawn Å¬·¡½º ÀÎÁö È®ÀÎ
+	//»ç¿ë ÇØµµ µÇ´Â »óÅÂÀÎÁö È®ÀÎ
+	AMyPlayer* Pawn = Cast<AMyPlayer>(TryGetPawnOwner());
 	if (Pawn && Pawn->IsValidLowLevel())
 	{
 		Speed = Pawn->GetCharacterMovement()->Velocity.Size();

@@ -28,4 +28,7 @@ public:
 	
 	UFUNCTION()
 	void StartGame();
+
+
+	void AddChatMessage(const FText& Message);
 };

@@ -22,6 +22,7 @@
 #include "Items/MasterItem.h"
 #include "Local/LocalPC.h"
 #include "Local/BDGameInstance.h"
+#include "UnrealNetwork.h" // Network"
 
 // Sets default values
 ANetPlayer::ANetPlayer()
@@ -231,6 +232,16 @@ void ANetPlayer::Crouching()
 
 void ANetPlayer::DoIronsight()
 {
+	C2S_DoIronsight();
+}
+
+bool ANetPlayer::C2S_DoIronsight_Validate()
+{
+	return true;
+}
+
+void ANetPlayer::C2S_DoIronsight_Implementation()
+{
 	if (bIsSprint)
 	{
 		return;
@@ -250,6 +261,16 @@ void ANetPlayer::DoIronsight()
 
 void ANetPlayer::StartSprint()
 {
+	C2S_StartSprint();
+}
+
+bool ANetPlayer::C2S_StartSprint_Validate()
+{
+	return true;
+}
+
+void ANetPlayer::C2S_StartSprint_Implementation()
+{
 	if (bIsCrouched || bIsIronsight)
 	{
 		return;
@@ -259,6 +280,16 @@ void ANetPlayer::StartSprint()
 }
 
 void ANetPlayer::StopSprint()
+{
+	C2S_StopSprint();
+}
+
+bool ANetPlayer::C2S_StopSprint_Validate()
+{
+	return true;
+}
+
+void ANetPlayer::C2S_StopSprint_Implementation()
 {
 	if (bIsSprint)
 	{
@@ -333,6 +364,35 @@ void ANetPlayer::OnShoot()
 	FVector TraceStart = CameraLocation;
 	FVector TraceEnd = CameraLocation + (WorldDirection * 8000000.0f);
 
+	C2S_Fire(TraceStart, TraceEnd);
+
+	//카메라 흔들기
+	UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->PlayCameraShake(
+	UFireCameraShake::StaticClass());
+
+	//총구반동
+	FRotator NewRotation = GetControlRotation();
+	NewRotation.Pitch += 1.0f;
+	NewRotation.Yaw += FMath::RandRange(-0.5f, 0.5f);
+	UGameplayStatics::GetPlayerController(GetWorld(), 0)->SetControlRotation(NewRotation);
+
+	//연사 구현
+	if (bIsFire)
+	{
+		GetWorldTimerManager().SetTimer(ShootTimer, this, &ANetPlayer::OnShoot, 0.2f);
+	}
+}
+
+bool ANetPlayer::C2S_Fire_Validate(FVector TraceStart, FVector TraceEnd)
+{
+	return true;
+}
+
+//클라이언트에서 시작과 충돌 끝점을 받아서 계산
+void ANetPlayer::C2S_Fire_Implementation(FVector TraceStart, FVector TraceEnd)
+{
+	S2A_MuzzleFlashAndSound();
+
 	//충돌할 물체 종류
 	TArray<TEnumAsByte<EObjectTypeQuery>> ObjectTypes;
 	ObjectTypes.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_WorldStatic));
@@ -359,9 +419,6 @@ void ANetPlayer::OnShoot()
 		FLinearColor::Green,
 		3.0f
 	);
-
-	UGameplayStatics::SpawnSoundAttached(FireSound, Weapon);
-	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FireEffect, Weapon->GetSocketTransform(TEXT("MuzzleFlash")));
 
 	// 카메라에서 화면 가운데로 충돌 처리
 	if (bResult)
@@ -391,33 +448,7 @@ void ANetPlayer::OnShoot()
 		{
 			//UE_LOG(LogProjectBD, Warning, TEXT("Hit %s"), *OutHit.GetActor()->GetName());
 			//Hit Effect
-			if (OutHit.GetActor()->ActorHasTag(TEXT("Player")))
-			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),
-					BloodEffect,
-					OutHit.ImpactPoint,
-					OutHit.ImpactNormal.Rotation()
-				);
-			}
-			else
-			{
-				UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),
-					HitEffect,
-					OutHit.ImpactPoint,
-					OutHit.ImpactNormal.Rotation()
-				);
-
-				UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(GetWorld(),
-					BulletDecal,
-					FVector(5, 5, 5),
-					OutHit.ImpactPoint,
-					OutHit.ImpactNormal.Rotation(),
-					10.0f
-				);
-
-				//UE_LOG(LogProjectBD, Warning, TEXT("Decal Fade Size %f"), Decal->FadeScreenSize);
-				Decal->SetFadeScreenSize(0.001f); // Screen 차지 비율(percent)
-			}
+			S2A_DecalAndHitEffect(OutHit);
 
 			//데미지 처리, 데미지 전달
 			UGameplayStatics::ApplyPointDamage(
@@ -439,21 +470,6 @@ void ANetPlayer::OnShoot()
 				IgnoreActors
 			);*/
 		}
-		//카메라 흔들기
-		UGameplayStatics::GetPlayerCameraManager(GetWorld(), 0)->PlayCameraShake(
-			UFireCameraShake::StaticClass());
-
-		//총구반동
-		FRotator NewRotation = GetControlRotation();
-		NewRotation.Pitch += 1.0f;
-		NewRotation.Yaw += FMath::RandRange(-0.5f, 0.5f);
-		UGameplayStatics::GetPlayerController(GetWorld(), 0)->SetControlRotation(NewRotation);
-	}
-
-	//연사 구현
-	if (bIsFire)
-	{
-		GetWorldTimerManager().SetTimer(ShootTimer, this, &ANetPlayer::OnShoot, 0.2f);
 	}
 }
 
@@ -485,7 +501,7 @@ float ANetPlayer::TakeDamage(float DamageAmount, FDamageEvent const & DamageEven
 		if (CurrentHP <= 0)
 		{
 			CurrentHP = 0;
-			DeadProcess();
+			S2A_DeadProcess();
 		}
 
 		UE_LOG(LogProjectBD, Warning, TEXT("CurrentHP %f"), CurrentHP);
@@ -498,7 +514,7 @@ float ANetPlayer::TakeDamage(float DamageAmount, FDamageEvent const & DamageEven
 	return DamageAmount;
 }
 
-void ANetPlayer::DeadProcess()
+void ANetPlayer::S2A_DeadProcess_Implementation()
 {
 	//GetMesh()->SetSimulatePhysics(true);
 	FString SectionName = FString::Printf(TEXT("Death_%d"), FMath::RandRange(1, 2));
@@ -622,5 +638,59 @@ void ANetPlayer::ShowInventory()
 	if (PC)
 	{
 		PC->ShowInventory();
+	}
+}
+
+void ANetPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//조건식으로 대역폭 줄임
+	//DOREPLIFETIME_CONDITION(ANetPlayer, bIsSprint, COND_SimulatedOnly);
+
+	DOREPLIFETIME(ANetPlayer, bIsSprint);
+	DOREPLIFETIME(ANetPlayer, bIsIronsight);
+	DOREPLIFETIME(ANetPlayer, bIsFire);
+	DOREPLIFETIME(ANetPlayer, CurrentHP);
+	DOREPLIFETIME(ANetPlayer, bLeftLean);
+	DOREPLIFETIME(ANetPlayer, bRightLean);
+	DOREPLIFETIME(ANetPlayer, bIsReload);
+}
+
+void ANetPlayer::S2A_MuzzleFlashAndSound_Implementation()
+{
+	//MuzzleFlash, Fire Sound
+	UGameplayStatics::SpawnSoundAttached(FireSound, Weapon);
+	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), FireEffect, Weapon->GetSocketTransform(TEXT("MuzzleFlash")));
+}
+
+void ANetPlayer::S2A_DecalAndHitEffect_Implementation(const FHitResult& OutHit)
+{
+	if (OutHit.GetActor()->ActorHasTag(TEXT("Player")))
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),
+			BloodEffect,
+			OutHit.ImpactPoint,
+			OutHit.ImpactNormal.Rotation()
+		);
+	}
+	else
+	{
+		UGameplayStatics::SpawnEmitterAtLocation(GetWorld(),
+			HitEffect,
+			OutHit.ImpactPoint,
+			OutHit.ImpactNormal.Rotation()
+		);
+
+		UDecalComponent* Decal = UGameplayStatics::SpawnDecalAtLocation(GetWorld(),
+			BulletDecal,
+			FVector(5, 5, 5),
+			OutHit.ImpactPoint,
+			OutHit.ImpactNormal.Rotation(),
+			10.0f
+		);
+
+		//UE_LOG(LogProjectBD, Warning, TEXT("Decal Fade Size %f"), Decal->FadeScreenSize);
+		Decal->SetFadeScreenSize(0.001f); // Screen 차지 비율(percent)
 	}
 }

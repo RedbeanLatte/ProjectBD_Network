@@ -11,6 +11,7 @@
 #include "Lobby/LobbyWidgetBase.h"
 #include "Local/BDGameInstance.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/Button.h"
 
 ALobbyPC::ALobbyPC()
 {
@@ -35,6 +36,15 @@ void ALobbyPC::S2C_SetupWidget_Implementation()
 		LobbyWidget->AddToViewport();
 		SetInputMode(FInputModeGameAndUI());
 		bShowMouseCursor = true;
+
+		if (LobbyWidget && HasAuthority())
+		{
+			LobbyWidget->StartGameButton->SetVisibility(ESlateVisibility::Visible);
+		}
+		else
+		{
+			LobbyWidget->StartGameButton->SetVisibility(ESlateVisibility::Collapsed);
+		}
 	}
 }
 
@@ -87,5 +97,37 @@ void ALobbyPC::UpdateSlotData()
 			i++;
 			//빈 UI 슬롯이 없으면 아이템 그리지 않음
 		}
+	}
+}
+
+bool ALobbyPC::C2S_SendChatMessage_Validate(const FText & Message)
+{
+	return true;
+}
+
+//Host에서 실행
+void ALobbyPC::C2S_SendChatMessage_Implementation(const FText & Message)
+{
+	for (auto i = GetWorld()->GetPlayerControllerIterator(); i; i++) 
+	{
+		auto PC = Cast<ALobbyPC>(*i);
+		if (PC)
+		{
+			//Host->Client 실행
+			PC->S2C_AddChatMessage(Message);
+		}
+	}
+}
+
+bool ALobbyPC::S2C_AddChatMessage_Validate(const FText & Message)
+{
+	return true;
+}
+
+void ALobbyPC::S2C_AddChatMessage_Implementation(const FText & Message)
+{
+	if (LobbyWidget)
+	{
+		LobbyWidget->AddChatMessage(Message);
 	}
 }
